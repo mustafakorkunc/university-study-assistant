@@ -160,9 +160,17 @@ def get_next_best_action(user_id: int, course_id: int, db: Session):
 def get_recurring_misconceptions(user_id: int, course_id: int, db: Session):
     # Only pull misconceptions from this course
     active = db.query(Misconception).filter_by(course_id=course_id, status="active").all()
+
+    # Batch fetch concepts to avoid N+1 query problem
+    concept_ids = [m.concept_id for m in active if m.concept_id]
+    concepts_map = {}
+    if concept_ids:
+        concepts = db.query(Concept).filter(Concept.id.in_(concept_ids)).all()
+        concepts_map = {c.id: c for c in concepts}
+
     recurring = []
     for m in active:
-        concept = db.query(Concept).get(m.concept_id) if m.concept_id else None
+        concept = concepts_map.get(m.concept_id) if m.concept_id else None
         recurring.append({
             "concept": concept.label if concept else "General",
             "category": m.category,
