@@ -2,7 +2,6 @@ import os
 from datetime import datetime, timedelta
 from sqlalchemy import create_engine, Column, Integer, String, Float, DateTime, ForeignKey, Text, Boolean
 from sqlalchemy.orm import declarative_base, sessionmaker, relationship
-import json
 
 Base = declarative_base()
 
