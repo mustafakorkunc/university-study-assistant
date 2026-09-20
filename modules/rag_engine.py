@@ -36,6 +36,10 @@ def extract_pdf(uploaded_file):
             all_chunks.extend(chunk_text(text, i + 1))
     return all_chunks
 
+def extract_txt(uploaded_file):
+    text = uploaded_file.getvalue().decode("utf-8")
+    return chunk_text(text, 1)
+
 class HybridRAG:
     def __init__(self, api_key):
         self.client = genai.Client(api_key=api_key)

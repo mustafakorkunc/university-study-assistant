@@ -8,7 +8,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 from modules.db import get_session, Document, Chunk, Flashcard, update_sm2
-from modules.rag_engine import extract_pdf, HybridRAG
+from modules.rag_engine import extract_pdf, extract_txt, HybridRAG
 from modules.concept_graph import extract_knowledge_graph, generate_pyvis_html
 from modules.cognitive_evaluator import generate_exam_questions, evaluate_response
 from modules.exporter import export_to_anki, export_markdown_summary
@@ -43,19 +43,36 @@ with st.sidebar:
             st.session_state.rag_engine.ingest_chunks(chunk_dicts)
             st.success(f"Indexed {len(chunk_dicts)} chunks.")
 
+    st.divider()
+    with st.expander("Danger Zone"):
+        if st.button("Reset Database", type="primary"):
+            db.query(Flashcard).delete()
+            db.query(Chunk).delete()
+            db.query(Document).delete()
+            db.commit()
+            if st.session_state.rag_engine:
+                st.session_state.rag_engine.ingest_chunks([])
+            st.session_state.chat_history = []
+            st.session_state.exam_questions = []
+            st.success("Database has been reset.")
+            st.rerun()
+
 tab1, tab2, tab3, tab4, tab5 = st.tabs(["📚 Knowledge Matrix", "🔬 Socratic Lab", "🔁 Active Recall (SM-2)", "📝 Diagnostic Exam", "📤 Export"])
 
 # --- TAB 1: KNOWLEDGE MATRIX ---
 with tab1:
     st.header("Document Ingestion & Semantic Graph")
-    uploaded_file = st.file_uploader("Upload Academic Paper / Notes (PDF)", type=["pdf"])
+    uploaded_file = st.file_uploader("Upload Academic Paper / Notes (PDF/TXT)", type=["pdf", "txt"])
     
     col1, col2 = st.columns([1, 1])
     with col1:
         if st.button("Process & Index Document"):
             if uploaded_file and api_key:
                 with st.spinner("Extracting & Chunking..."):
-                    extracted_chunks = extract_pdf(uploaded_file)
+                    if uploaded_file.name.endswith('.txt'):
+                        extracted_chunks = extract_txt(uploaded_file)
+                    else:
+                        extracted_chunks = extract_pdf(uploaded_file)
                     
                     doc = Document(filename=uploaded_file.name)
                     db.add(doc)
@@ -93,6 +110,13 @@ with tab1:
 # --- TAB 2: SOCRATIC LAB ---
 with tab2:
     st.header("Socratic Lab (Source-Grounded)")
+
+    col1, col2 = st.columns([8, 2])
+    with col2:
+        if st.button("Clear Chat"):
+            st.session_state.chat_history = []
+            st.rerun()
+
     for msg in st.session_state.chat_history:
         with st.chat_message(msg["role"]):
             st.markdown(msg["content"])
@@ -154,7 +178,8 @@ with tab3:
     due_cards = db.query(Flashcard).filter(Flashcard.next_review <= now).all()
     
     if not due_cards:
-        st.info("No cards due for review right now. Great job!")
+        st.balloons()
+        st.success("🎉 You have finished all cards for today! Great job!")
     else:
         card = due_cards[0]
         st.write(f"**Cards Due:** {len(due_cards)}")
@@ -189,12 +214,14 @@ with tab3:
 with tab4:
     st.header("Diagnostic Exam (Bloom's Taxonomy)")
     
+    num_questions = st.slider("Number of Questions", min_value=1, max_value=10, value=3)
+
     if st.button("Generate Exam"):
         if api_key:
             with st.spinner("Generating..."):
                 all_chunks = db.query(Chunk).all()
                 context = "\n".join([c.content for c in all_chunks[:20]]) # sample
-                st.session_state.exam_questions = generate_exam_questions(context, api_key)
+                st.session_state.exam_questions = generate_exam_questions(context, api_key, num_questions=num_questions)
                 
     if st.session_state.exam_questions:
         for i, eq in enumerate(st.session_state.exam_questions):
