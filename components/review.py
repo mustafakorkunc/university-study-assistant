@@ -1,5 +1,5 @@
 import streamlit as st
-from modules.db import Flashcard, update_sm2, MistakeLog, Concept, FlashcardReviewEvent
+from modules.db import Flashcard, update_sm2, MistakeLog, FlashcardReviewEvent
 from datetime import datetime
 from modules.adaptive_learning import get_concept_state
 
