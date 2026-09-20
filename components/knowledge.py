@@ -2,7 +2,6 @@ import streamlit as st
 import streamlit.components.v1 as components
 from modules.db import Concept, Flashcard, MistakeLog
 from modules.adaptive_learning import get_concept_state
-import json
 
 import config
 import tempfile
