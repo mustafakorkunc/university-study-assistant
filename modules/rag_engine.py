@@ -59,14 +59,18 @@ class RetrievalService:
     def __init__(self, api_key):
         self.client = genai.Client(api_key=api_key)
 
-    def retrieve(self, query: str, course_id: int, db: Session, top_k: int = config.TOP_K_RETRIEVAL):
-        """
-        Retrieves the most relevant chunks strictly for the given course_id.
-        """
-        chunks = db.query(Chunk).join(Document).filter(Document.course_id == course_id).all()
-        if not chunks:
-            return []
-            
+    def _generate_embedding(self, query: str):
+        try:
+            resp = self.client.models.embed_content(
+                model=config.EMBEDDING_MODEL,
+                contents=query
+            )
+            return resp.embeddings[0].values
+        except Exception as e:
+            print(f"Query embedding failed: {e}. Falling back to lexical-only retrieval.")
+            return None
+
+    def _execute_search(self, query: str, chunks: list, q_emb: list):
         corpus = [c.content.lower().split() for c in chunks]
         bm25 = BM25Okapi(corpus)
         
@@ -75,16 +79,6 @@ class RetrievalService:
         bm25_scores = bm25.get_scores(tokenized_query)
         
         # 2. Semantic retrieval
-        q_emb = None
-        try:
-            resp = self.client.models.embed_content(
-                model=config.EMBEDDING_MODEL,
-                contents=query
-            )
-            q_emb = resp.embeddings[0].values
-        except Exception as e:
-            print(f"Query embedding failed: {e}. Falling back to lexical-only retrieval.")
-            
         semantic_scores = {}
         if q_emb:
             for chunk in chunks:
@@ -95,7 +89,10 @@ class RetrievalService:
                             semantic_scores[chunk.id] = cosine_similarity(q_emb, c_emb)
                     except:
                         pass
-        
+
+        return bm25_scores, semantic_scores
+
+    def _rerank_results(self, chunks: list, bm25_scores: list, semantic_scores: dict, top_k: int):
         # 3. Reciprocal Rank Fusion (RRF)
         bm25_ranks = np.argsort(bm25_scores)[::-1]
         vector_scores = [semantic_scores.get(c.id, 0.0) for c in chunks]
@@ -131,6 +128,20 @@ class RetrievalService:
             if len(results) >= top_k:
                 break
                 
+        return results
+
+    def retrieve(self, query: str, course_id: int, db: Session, top_k: int = config.TOP_K_RETRIEVAL):
+        """
+        Retrieves the most relevant chunks strictly for the given course_id.
+        """
+        chunks = db.query(Chunk).join(Document).filter(Document.course_id == course_id).all()
+        if not chunks:
+            return []
+
+        q_emb = self._generate_embedding(query)
+        bm25_scores, semantic_scores = self._execute_search(query, chunks, q_emb)
+        results = self._rerank_results(chunks, bm25_scores, semantic_scores, top_k)
+
         return results
 
 def get_retrieval_service(api_key):
