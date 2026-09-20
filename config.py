@@ -1,0 +1,30 @@
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
+
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
+
+# Models
+LLM_MODEL = "gemini-3.6-flash"
+EMBEDDING_MODEL = "gemini-embedding-2"
+
+# RAG Parameters
+CHUNK_SIZE = 500
+CHUNK_OVERLAP = 50
+TOP_K_RETRIEVAL = 5
+RRF_K = 60
+RRF_THRESHOLD = 0.01
+
+# UI Aesthetics
+COLOR_BG = "#05070A"
+COLOR_PANEL = "#0B0F14"
+COLOR_PANEL_ELEVATED = "#10161D"
+COLOR_BORDER = "#1C2A32"
+COLOR_PRIMARY = "#00FF9C"
+COLOR_SECONDARY = "#00D9FF"
+COLOR_ACCENT = "#8B5CF6"
+COLOR_DANGER = "#FF4567"
+COLOR_WARNING = "#FFC857"
+COLOR_TEXT = "#E8F1F5"
+COLOR_MUTED = "#71808A"

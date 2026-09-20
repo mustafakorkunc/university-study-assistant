@@ -1,0 +1,11 @@
+venv/
+__pycache__/
+*.pyc
+.env
+*.db
+*.apkg
+*.md
+!README.md
+!docs/*.md
+!docs/**/*.md
+!prompts/*.md
