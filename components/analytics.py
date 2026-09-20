@@ -1,5 +1,5 @@
 import streamlit as st
-from modules.db import Course, Flashcard, MistakeLog, Document, Chunk, Concept
+from modules.db import Course, Flashcard, MistakeLog, Document, Chunk
 import pandas as pd
 from datetime import datetime
 from modules.adaptive_learning import get_recurring_misconceptions
