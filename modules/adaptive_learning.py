@@ -89,10 +89,7 @@ def get_course_learning_state(user_id: int, course_id: int, db: Session):
         }
     }
 
-def get_next_best_action(user_id: int, course_id: int, db: Session):
-    now = datetime.utcnow()
-    
-    due_cards = db.query(Flashcard).filter(Flashcard.course_id == course_id, Flashcard.next_review <= now).count()
+def _check_urgent_reviews(due_cards: int):
     if due_cards > 10:
         return {
             "action": "REVIEW",
@@ -101,7 +98,9 @@ def get_next_best_action(user_id: int, course_id: int, db: Session):
             "reason": "Spaced repetition is critical.",
             "estimated_effort": "15 mins"
         }
-        
+    return None
+
+def _check_misconceptions(course_id: int, db: Session):
     active_misconception = db.query(Misconception).filter_by(course_id=course_id, status="active").first()
     if active_misconception:
         concept = db.query(Concept).get(active_misconception.concept_id) if active_misconception.concept_id else None
@@ -113,7 +112,9 @@ def get_next_best_action(user_id: int, course_id: int, db: Session):
             "reason": f"You have an unresolved misconception: '{active_misconception.category}'.",
             "estimated_effort": "10 mins"
         }
-        
+    return None
+
+def _check_concept_states(user_id: int, course_id: int, db: Session):
     concepts = db.query(Concept).filter_by(course_id=course_id).all()
     if concepts:
         states = [get_concept_state(user_id, course_id, c.id, db) for c in concepts]
@@ -139,7 +140,9 @@ def get_next_best_action(user_id: int, course_id: int, db: Session):
                 "reason": "You haven't seen this in a while.",
                 "estimated_effort": "20 mins"
             }
-            
+    return None
+
+def _check_remaining_reviews(due_cards: int):
     if due_cards > 0:
         return {
             "action": "REVIEW",
@@ -148,6 +151,23 @@ def get_next_best_action(user_id: int, course_id: int, db: Session):
             "reason": "Clear remaining reviews.",
             "estimated_effort": "5 mins"
         }
+    return None
+
+def get_next_best_action(user_id: int, course_id: int, db: Session):
+    now = datetime.utcnow()
+    due_cards = db.query(Flashcard).filter(Flashcard.course_id == course_id, Flashcard.next_review <= now).count()
+
+    action = _check_urgent_reviews(due_cards)
+    if action: return action
+
+    action = _check_misconceptions(course_id, db)
+    if action: return action
+
+    action = _check_concept_states(user_id, course_id, db)
+    if action: return action
+
+    action = _check_remaining_reviews(due_cards)
+    if action: return action
         
     return {
         "action": "LEARN_NEW",
