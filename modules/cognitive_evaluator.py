@@ -95,7 +95,7 @@ class FlashcardList(BaseModel):
     cards: list[GeneratedFlashcard]
 
 def generate_flashcards_for_concept(course_id, concept_id, count, difficulty, card_type, db, api_key):
-    from modules.db import Concept, Document, Chunk
+    from modules.db import Concept
     from modules.rag_engine import RetrievalService
     
     concept = db.query(Concept).get(concept_id)
