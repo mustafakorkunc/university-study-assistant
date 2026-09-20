@@ -2,7 +2,7 @@ import streamlit as st
 import os
 import tempfile
 import config
-from modules.db import Document, Chunk, Flashcard
+from modules.db import Document, Chunk
 from modules.rag_engine import extract_pdf, extract_txt
 
 def render(db, course_id):
