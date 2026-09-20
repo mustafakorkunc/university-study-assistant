@@ -120,6 +120,8 @@ class Misconception(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
     status = Column(String, default="active") # active or resolved
 
+    concept = relationship("Concept")
+
 class FlashcardReviewEvent(Base):
     __tablename__ = 'flashcard_review_events'
     id = Column(Integer, primary_key=True)
