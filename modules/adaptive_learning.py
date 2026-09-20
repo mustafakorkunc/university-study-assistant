@@ -1,6 +1,6 @@
 from datetime import datetime, timedelta
 import math
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 from modules.db import Concept, Flashcard, QuestionAttempt, Misconception, FlashcardReviewEvent
 
 class LearningPolicy:
@@ -159,12 +159,11 @@ def get_next_best_action(user_id: int, course_id: int, db: Session):
 
 def get_recurring_misconceptions(user_id: int, course_id: int, db: Session):
     # Only pull misconceptions from this course
-    active = db.query(Misconception).filter_by(course_id=course_id, status="active").all()
+    active = db.query(Misconception).options(joinedload(Misconception.concept)).filter_by(course_id=course_id, status="active").all()
     recurring = []
     for m in active:
-        concept = db.query(Concept).get(m.concept_id) if m.concept_id else None
         recurring.append({
-            "concept": concept.label if concept else "General",
+            "concept": m.concept.label if m.concept else "General",
             "category": m.category,
             "description": m.description
         })
