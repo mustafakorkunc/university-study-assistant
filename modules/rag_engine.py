@@ -87,14 +87,16 @@ class RetrievalService:
             
         semantic_scores = {}
         if q_emb:
-            for chunk in chunks:
-                if chunk.embedding:
-                    try:
-                        c_emb = json.loads(chunk.embedding) if isinstance(chunk.embedding, str) else chunk.embedding
-                        if sum(abs(v) for v in c_emb) > 1e-5 and sum(abs(v) for v in q_emb) > 1e-5:
-                            semantic_scores[chunk.id] = cosine_similarity(q_emb, c_emb)
-                    except:
-                        pass
+            q_emb_valid = np.sum(np.abs(q_emb)) > 1e-5
+            if q_emb_valid:
+                for chunk in chunks:
+                    if chunk.embedding:
+                        try:
+                            c_emb = json.loads(chunk.embedding) if isinstance(chunk.embedding, str) else chunk.embedding
+                            if np.sum(np.abs(c_emb)) > 1e-5:
+                                semantic_scores[chunk.id] = cosine_similarity(q_emb, c_emb)
+                        except:
+                            pass
         
         # 3. Reciprocal Rank Fusion (RRF)
         bm25_ranks = np.argsort(bm25_scores)[::-1]
